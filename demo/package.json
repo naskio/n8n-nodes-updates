@@ -1,0 +1,11 @@
+{
+  "name": "n8n-demo",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "start": "./node_modules/n8n/bin/n8n start"
+  },
+  "dependencies": {
+    "n8n": "^0.165.0"
+  }
+}
