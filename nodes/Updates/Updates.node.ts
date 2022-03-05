@@ -5,6 +5,7 @@ import {
 	INodeTypeDescription,
 	IWorkflowMetadata,
 	INode, IDataObject,
+	NodeOperationError,
 } from 'n8n-workflow';
 
 const hash = require('object-hash');
@@ -52,31 +53,47 @@ export class Updates implements INodeType {
 		staticData.hashesIndex = staticData.hashesIndex || {};
 		const hashesIndex = staticData.hashesIndex as IDataObject;
 
-		for (const item of items) {
-			const itemJson = item.json;
+		const currentIds = new Set<any>();
 
-			const itemKeys = {
-				"workflowId": `${workflowMetadata.id}`,
-				"nodeName": `${node.name}`, // to enable multiple nodes in the same workflow
-				// "workflowActive": workflowMetadata.active, // to get different results when workflow is active or not
-				"id": itemJson[idField],
-			};
-			const itemKeyHash: string = hash(itemKeys);
-			const itemHash: string = hash(itemJson);
+		try {
+			for (const item of items) {
+				const itemJson = item.json;
 
-			if (itemKeyHash in hashesIndex) {
-				if (hashesIndex[itemKeyHash] === itemHash) {
-					oldItems.push(item);
+				if (currentIds.has(itemJson[idField])) {
+					// multiple items with same id
+					throw new NodeOperationError(this.getNode(), `${idField} ${itemJson[idField]} is not unique. Please make sure that all items have unique ${idField}.`);
+				} else {
+					currentIds.add(itemJson[idField]);
+				}
+
+				const itemKeys = {
+					"workflowId": `${workflowMetadata.id}`,
+					"nodeName": `${node.name}`, // to enable multiple nodes in the same workflow
+					// "workflowActive": workflowMetadata.active, // to get different results when workflow is active or not
+					"id": itemJson[idField],
+				};
+				const itemKeyHash: string = hash(itemKeys);
+				const itemHash: string = hash(itemJson);
+
+				if (itemKeyHash in hashesIndex) {
+					if (hashesIndex[itemKeyHash] === itemHash) {
+						oldItems.push(item);
+					} else {
+						hashesIndex[itemKeyHash] = itemHash;
+						updatedItems.push(item);
+					}
 				} else {
 					hashesIndex[itemKeyHash] = itemHash;
-					updatedItems.push(item);
+					newItems.push(item);
 				}
+			}
+		} catch (error) {
+			if (this.continueOnFail()) {
+				return [[{json: {error: (error as NodeOperationError).message}} as INodeExecutionData], [], []];
 			} else {
-				hashesIndex[itemKeyHash] = itemHash;
-				newItems.push(item);
+				throw error;
 			}
 		}
-
 		return [newItems, updatedItems, oldItems];
 	}
 }
