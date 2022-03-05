@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "start": "./node_modules/n8n/bin/n8n start"
+    "start": "./node_modules/n8n/bin/n8n start",
+    "update": "npm-check-updates -u"
+  },
+  "devDependencies": {
+    "npm-check-updates": "^12.5.2"
   },
   "dependencies": {
-    "n8n": "^0.165.0"
+    "n8n": "^0.165.1"
   }
 }
